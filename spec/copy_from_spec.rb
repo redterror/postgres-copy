@@ -124,4 +124,16 @@ describe "COPY FROM" do
     TestModel.order(:id).map{|r| r.attributes}.should == [{'id' => 1, 'data' => 'test "data" 1'}]
   end
 
+  it "should import lines with single quotes and embedded custom delimiters" do
+    TestModel.copy_from File.expand_path('spec/fixtures/semicolon_with_embedded_semicolon.csv'), :delimiter => ';', :quote => "'"
+    TestModel.order(:id).map{|r| r.attributes}.should == [{'id' => 1, 'data' => 'test ";data" 1'}]
+  end
+
+  it "should import lines with single quotes and embedded custom delimiters in a block" do
+    TestModel.copy_from File.expand_path('spec/fixtures/semicolon_with_embedded_semicolon.csv'), :delimiter => ';', :quote => "'" do |row|
+      row
+    end
+    TestModel.order(:id).map{|r| r.attributes}.should == [{'id' => 1, 'data' => 'test ";data" 1'}]
+  end
+
 end

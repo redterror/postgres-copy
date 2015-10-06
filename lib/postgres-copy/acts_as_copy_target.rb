@@ -1,3 +1,5 @@
+require 'csv'
+
 module PostgresCopy
   module ActsAsCopyTarget
     extend ActiveSupport::Concern
@@ -43,7 +45,10 @@ module PostgresCopy
       # * You can map fields from the file to different fields in the table using a map in the options hash
       # * For further details on usage take a look at the README.md
       def copy_from path_or_io, options = {}
-        options = {:delimiter => ",", :format => :csv, :header => true, :quote => '"'}.merge(options)
+        options = {:delimiter => ",", :format => :csv, :header => true, :quote => '"',
+                   :csv_opts => {:force_quotes => false} 
+                  }.merge(options)
+        csv_opts = options[:csv_opts].merge(col_sep: options[:delimiter], quote_char: options[:quote])
         options_string = if options[:format] == :binary
                            "BINARY"
                          else
@@ -56,7 +61,7 @@ module PostgresCopy
           columns_list = options[:columns] || []
         elsif options[:header]
           line = io.gets
-          columns_list = options[:columns] || line.strip.split(options[:delimiter])
+          columns_list = options[:columns] || CSV.parse_line(line, csv_opts)
         else
           columns_list = options[:columns]
         end
@@ -83,10 +88,10 @@ module PostgresCopy
             while line = io.gets do
               next if line.strip.size == 0
               if block_given?
-                row = line.strip.split(options[:delimiter],-1)
+                row = CSV.parse_line(line.strip, csv_opts)
                 yield(row)
                 next if row.all?{|f| f.nil? }
-                line = row.join(options[:delimiter]) + "\n"
+                line = CSV.generate_line(row, csv_opts)
               end
               connection.raw_connection.put_copy_data line
             end
