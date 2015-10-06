@@ -46,6 +46,7 @@ module PostgresCopy
       # * For further details on usage take a look at the README.md
       def copy_from path_or_io, options = {}
         options = {:delimiter => ",", :format => :csv, :header => true, :quote => '"',
+                   :pass_line_to_block => false,
                    :csv_opts => {:force_quotes => false} 
                   }.merge(options)
         csv_opts = options[:csv_opts].merge(col_sep: options[:delimiter], quote_char: options[:quote])
@@ -88,10 +89,15 @@ module PostgresCopy
             while line = io.gets do
               next if line.strip.size == 0
               if block_given?
-                row = CSV.parse_line(line.strip, csv_opts)
-                yield(row)
-                next if row.all?{|f| f.nil? }
-                line = CSV.generate_line(row, csv_opts)
+                if options[:pass_line_to_block]
+                  line = yield(line)
+                  next if line.nil?
+                else
+                  row = CSV.parse_line(line.strip, csv_opts)
+                  yield(row)
+                  next if row.all?{|f| f.nil? }
+                  line = CSV.generate_line(row, csv_opts)
+                end
               end
               connection.raw_connection.put_copy_data line
             end
