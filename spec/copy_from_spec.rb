@@ -136,4 +136,8 @@ describe "COPY FROM" do
     TestModel.order(:id).map{|r| r.attributes}.should == [{'id' => 1, 'data' => 'test ";data" 1'}]
   end
 
+  it "should import lines with a custom escape character" do
+    TestModel.copy_from File.expand_path('spec/fixtures/semicolon_with_escape.csv'), :delimiter => ';', :quote => "'", :escape => '\\'
+    TestModel.order(:id).map{|r| r.attributes}.should == [{'id' => 1, 'data' => %q|test '";data" 1|}]
+  end
 end
