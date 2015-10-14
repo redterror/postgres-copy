@@ -76,7 +76,13 @@ module PostgresCopy
 
         columns_list = columns_list.map{|c| options[:map][c.to_s] } if options[:map]
         columns_string = columns_list.size > 0 ? "(\"#{columns_list.join('","')}\")" : ""
-        connection.raw_connection.copy_data %{COPY #{table} #{columns_string} FROM STDIN #{options_string}} do
+
+        qry = %{COPY #{table} #{columns_string} FROM STDIN #{options_string}}
+        if respond_to?(:logger) && logger.respond_to?(:info)
+          logger.info "Beginning copy_from: #{qry}"
+        end
+
+        connection.raw_connection.copy_data(qry) do
           if options[:format] == :binary
             bytes = 0
             begin
