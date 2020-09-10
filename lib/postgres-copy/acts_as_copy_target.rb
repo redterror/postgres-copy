@@ -123,13 +123,18 @@ module PostgresCopy
               # If line is incomplete, get the next line until it terminates
               if line_buffer =~ /\n$/ || line_buffer =~ /\Z/
                 if block_given?
-                  begin
-                    row = CSV.parse_line(line_buffer.strip, {:col_sep => options[:delimiter]})
-                    yield(row)
-                    next if row.all?{|f| f.nil? }
-                    line_buffer = CSV.generate_line(row, {:col_sep => options[:delimiter]})
-                  rescue CSV::MalformedCSVError
-                    next
+                  if options[:yield_raw_line]
+                    line_buffer = yield(line_buffer)
+                    next if line_buffer == ''
+                  else
+                    begin
+                      row = CSV.parse_line(line_buffer.strip, {:col_sep => options[:delimiter]})
+                      yield(row)
+                      next if row.all?{|f| f.nil? }
+                      line_buffer = CSV.generate_line(row, {:col_sep => options[:delimiter]})
+                    rescue CSV::MalformedCSVError
+                      next
+                    end
                   end
                 end
 
